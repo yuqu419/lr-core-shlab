@@ -183,7 +183,8 @@ void eval(char *cmdline) {
     sigprocmask(SIG_BLOCK, &set, NULL);
     int pid = fork();
     if (pid < 0) {
-        printf("执行失败");
+        printf("Run failed");
+        fflush(stdout);
     } else if (pid == 0) {
         setpgid(0, 0);
         sigprocmask(SIG_UNBLOCK, &set, NULL);
@@ -193,15 +194,14 @@ void eval(char *cmdline) {
         exit(1);
     } else {
         addjob(jobs, pid, is_bg ? BG : FG, cmdline);
-        sigprocmask(SIG_UNBLOCK, &set, NULL);
-        if (!is_bg)
-            waitfg(pid);
         if (is_bg) {
             struct job_t *job = getjobpid(jobs, pid);
             printf("[%d] (%d) %s\n", job->jid, pid, job->cmdline);
         }
+        sigprocmask(SIG_UNBLOCK, &set, NULL);
+        if (!is_bg)
+            waitfg(pid);
     }
-    return;
 }
 
 /*
@@ -331,7 +331,7 @@ void waitfg(pid_t pid) {
         if (fgpid(jobs) == 0) {
             return;
         }
-        sleep(1);
+        usleep(100);
     }
     return;
 }
@@ -395,7 +395,6 @@ void sigtstp_handler(int sig) {
     if (!job)
         return;
     kill(-job->pid, sig);
-    job->state = ST;
 }
 
 /*********************
